@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import Select from 'react-select';
 import { useCollection } from '../../hooks/useCollection';
+import { timestamp } from '../../firebase/config';
+import { useAuthContext } from '../../hooks/useAuthContext';
+import { useFirestore } from '../../hooks/useFirestore';
+import { useNavigate } from 'react-router-dom';
 
 import './Create.css';
 
@@ -12,8 +16,11 @@ const categories = [
 ]
 
 export default function Create() {
+    const { addDocument, response } = useFirestore('projects');
+    const navigate = useNavigate();
     const { documents } = useCollection('users');
     const [ users, setUsers ] = useState([]);
+    const { user } = useAuthContext();
 
     // form field values
     const [name, setName] = useState('');
@@ -21,6 +28,7 @@ export default function Create() {
     const [dueDate, setDueDate] = useState('');
     const [category, setCategory] = useState('');
     const [assignedUsers, setAssignedUsers] = useState([]);
+    const [formError, setFormError] = useState(null);
 
     useEffect(() => {
         if(documents) {
@@ -31,9 +39,45 @@ export default function Create() {
         }
     }, [documents])
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log(name, details, dueDate, category.value, assignedUsers);
+        setFormError(null);
+
+        if(!category) {
+            setFormError('Please select a project category');
+            return
+        }
+        if(assignedUsers.length < 1) {
+            setFormError('Please assign the project to at least one user')
+            return
+        }
+        const createdBy = {
+            displayName: user.displayName,
+            photoURL: user.photoURL,
+            id: user.uid
+        }
+
+        const assignedUsersList = assignedUsers.map(user => {
+            return {
+                displayName: user.value.displayName,
+                photoURL: user.value.photoURL,
+                id: user.value.id
+            }
+        })
+
+        const project = {
+            name,
+            details,
+            category: category.value,
+            duteDate: timestamp.fromDate(new Date(dueDate)),
+            comment: [],
+            createdBy,
+            assignedUsersList
+        }
+        await addDocument(project)
+        if(!response.error) {
+            navigate('/');
+        }
     }
     
     return (
@@ -81,6 +125,7 @@ export default function Create() {
                   />
              </label>
              <button className='btn'>Add Project</button>
+             {formError && <p className='error'>{formError}</p>} 
             </form>
         </div>
     )
