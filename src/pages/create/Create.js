@@ -69,8 +69,8 @@ export default function Create() {
             name,
             details,
             category: category.value,
-            duteDate: timestamp.fromDate(new Date(dueDate)),
-            comment: [],
+            dueDate: timestamp.fromDate(new Date(dueDate)),
+            comments: [],
             createdBy,
             assignedUsersList
         }
